@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Federal Grants Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script><script src="data.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#222}
+.header{background:linear-gradient(135deg,#1a237e,#283593);color:#fff;padding:20px 30px}
+.header h1{font-size:22px;font-weight:600}
+.header p{font-size:13px;opacity:.85;margin-top:4px}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:280px;background:#fff;border-right:1px solid #e0e0e0;padding:20px;overflow-y:auto;position:sticky;top:0;height:100vh;flex-shrink:0}
+.sidebar h3{font-size:13px;font-weight:600;color:#1a237e;margin:16px 0 8px;text-transform:uppercase;letter-spacing:.5px}
+.sidebar h3:first-child{margin-top:0}
+.main{flex:1;padding:20px 24px;overflow-y:auto}
+.filter-group{margin-bottom:14px}
+.filter-group label{display:block;font-size:12px;font-weight:500;color:#555;margin-bottom:3px}
+.filter-group select,.filter-group input[type=range]{width:100%}
+.filter-group select{font-size:12px;padding:5px 6px;border:1px solid #ccc;border-radius:4px;background:#fafafa}
+.year-range{display:flex;gap:8px;align-items:center}
+.year-range input[type=number]{width:60px;font-size:12px;padding:4px;border:1px solid #ccc;border-radius:4px;text-align:center}
+.year-range span{font-size:12px;color:#888}
+.multi-select{max-height:120px;overflow-y:auto;border:1px solid #ddd;border-radius:4px;padding:4px 6px;font-size:12px}
+.multi-select label{display:flex;align-items:center;gap:5px;padding:2px 0;cursor:pointer;font-weight:400;color:#333}
+.multi-select label:hover{background:#f5f5f5}
+.summary-bar{display:flex;gap:20px;margin-bottom:20px;flex-wrap:wrap}
+.stat-card{background:#fff;border-radius:8px;padding:16px 20px;flex:1;min-width:160px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.stat-card .label{font-size:11px;text-transform:uppercase;color:#888;font-weight:500;letter-spacing:.3px}
+.stat-card .value{font-size:24px;font-weight:700;color:#1a237e;margin-top:4px}
+.stat-card .sub{font-size:11px;color:#999;margin-top:2px}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.chart-card{background:#fff;border-radius:8px;padding:16px;box-shadow:0 1px 3px rgba(0,0,.08)}
+.chart-card.full{grid-column:1/-1}
+.chart-card h3{font-size:13px;font-weight:600;color:#444;margin-bottom:10px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#1a237e;color:#fff;padding:7px 8px;text-align:left;font-weight:500;white-space:nowrap;cursor:pointer}
+th:hover{background:#283593}
+td{padding:5px 8px;border-bottom:1px solid #eee}
+tr:hover td{background:#f5f5ff}
+tr:nth-child(even) td{background:#fafafe}
+tr:nth-child(even):hover td{background:#f0f0ff}
+.value-pos{color:#0d6c0d;font-weight:600}
+.page-controls{display:flex;gap:8px;align-items:center;margin:10px 0;font-size:13px}
+.page-controls button{padding:4px 12px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;font-size:12px}
+.page-controls button:hover{background:#e8eaf6}
+.page-controls button:disabled{opacity:.4;cursor:default}
+.search-input{padding:5px 6px;border:1px solid #ccc;border-radius:4px;font-size:12px;width:100%}
+.tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:500;margin:0 2px}
+.tag-forprofit{background:#e3f2fd;color:#1565c0}
+.tag-other{background:#f3e5f5;color:#7b1fa2}
+@media(max-width:900px){
+  .layout{flex-direction:column}
+  .sidebar{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid #ddd;max-height:300px}
+  .chart-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Federal Grants Analysis Dashboard</h1>
+  <p>Canada Federal Grants & Contributions · Historical (pre-2025) + 2025–2027 · 670,735 records · 396K recipients</p>
+  <p style="font-size:12px;opacity:.7;margin-top:2px">Source: <a href="https://search.open.canada.ca/grants/" target="_blank" style="color:#b0bec5">search.open.canada.ca/grants/</a></p>
+</div>
+
+<div class="layout">
+  <div class="sidebar" id="sidebar">
+    <h3>Year</h3>
+    <div class="year-range">
+      <input type="number" id="yearFrom" value="2004" min="2004" max="2027">
+      <span>to</span>
+      <input type="number" id="yearTo" value="2027" min="2004" max="2027">
+    </div>
+
+    <h3>Province</h3>
+    <div class="multi-select" id="provFilter"></div>
+
+    <h3>Value Range</h3>
+    <div class="multi-select" id="vrFilter"></div>
+
+    <h3>Recipient Type</h3>
+    <div class="multi-select" id="rtFilter"></div>
+
+    <h3>Search Programs</h3>
+    <input class="search-input" id="progSearch" placeholder="Type to filter programs..." oninput="updateProgCheckboxes()">
+    <div class="multi-select" id="progFilter" style="max-height:150px"></div>
+  </div>
+
+  <div class="main">
+    <div class="summary-bar" id="summaryBar">
+      <div class="stat-card"><div class="label">Total Grants</div><div class="value" id="statCount">—</div><div class="sub">filtered</div></div>
+      <div class="stat-card"><div class="label">Total Value</div><div class="value" id="statValue">—</div><div class="sub">filtered</div></div>
+      <div class="stat-card"><div class="label">Avg Grant</div><div class="value" id="statAvg">—</div><div class="sub">per filtered</div></div>
+      <div class="stat-card"><div class="label">Recipients</div><div class="value" id="statRecipients">—</div><div class="sub">unique companies</div></div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card full"><h3>Grants by Year (stacked by Province)</h3><canvas id="chartYear"></canvas></div>
+      <div class="chart-card"><h3>Top Programs</h3><canvas id="chartProg"></canvas></div>
+      <div class="chart-card"><h3>Value Distribution</h3><canvas id="chartValRange"></canvas></div>
+      <div class="chart-card full"><h3>Top Cities</h3><canvas id="chartCities"></canvas></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card"><h3>Recipient Types</h3><canvas id="chartRT" style="max-height:350px"></canvas></div>
+      <div class="chart-card"><h3>Federal Departments (top 15)</h3><canvas id="chartDept" style="max-height:350px"></canvas></div>
+      <div class="chart-card full"><h3>Top 25 Grants by Value</h3><canvas id="chartTop25" style="max-height:300px"></canvas></div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:20px">
+      <h3>Industry Split</h3>
+      <canvas id="chartIndustry" style="max-height:400px;margin-bottom:0"></canvas>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:20px">
+      <h3>Top Grants by Value</h3>
+      <div class="page-controls">
+        <button id="prevPage" onclick="changePage(-1)" disabled>←</button>
+        <span id="pageInfo">Page 1</span>
+        <button id="nextPage" onclick="changePage(1)">→</button>
+        <span style="margin-left:auto;font-size:11px;color:#999">Click column headers to sort</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="grantsTable">
+          <thead>
+            <tr>
+              <th onclick="sortTable('nm')">Company ↕</th>
+              <th onclick="sortTable('v')">Value ↕</th>
+              <th onclick="sortTable('yr')">Year ↕</th>
+              <th onclick="sortTable('pr')">Province ↕</th>
+              <th onclick="sortTable('cy')">City ↕</th>
+              <th onclick="sortTable('pg')">Program ↕</th>
+              <th onclick="sortTable('rt')">Type ↕</th>
+              <th onclick="sortTable('vr')">Range ↕</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:20px">
+      <h3>Top Companies by Total Value</h3>
+      <div class="page-controls">
+        <button id="compPrevPage" onclick="changeCompPage(-1)" disabled>&larr;</button>
+        <span id="compPageInfo">Page 1</span>
+        <button id="compNextPage" onclick="changeCompPage(1)">&rarr;</button>
+        <span style="margin-left:auto;font-size:11px;color:#999">Click column headers to sort</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="companyTable">
+          <thead>
+            <tr>
+              <th onclick="sortCompanyTable('nm')">Company &uarr;&darr;</th>
+              <th onclick="sortCompanyTable('v')" style="text-align:right">Total Value &uarr;&darr;</th>
+              <th onclick="sortCompanyTable('c')" style="text-align:right">Grants &uarr;&darr;</th>
+              <th onclick="sortCompanyTable('avg')" style="text-align:right">Avg/Grant &uarr;&darr;</th>
+              <th onclick="sortCompanyTable('topProg')">Top Program</th>
+            </tr>
+          </thead>
+          <tbody id="companyBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====== DATA LOADING ======
+let DATA = null;
+let filteredGrants = [];
+let currentPage = 1;
+const PAGE_SIZE = 25;
+let sortKey = 'v';
+let sortDesc = true;
+
+// Data is loaded via grants_data.js script tag
+document.addEventListener('DOMContentLoaded', () => {
+  DATA = GRANTS_DATA;
+  initDashboard();
+});
+
+// ====== HELPERS ======
+const FORMAT = n => {
+  if (n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return '$' + (n/1e3).toFixed(0) + 'K';
+  return '$' + Math.round(n);
+};
+const FORMAT_FULL = n => '$' + Math.round(n).toLocaleString();
+
+const YEAR_PROVS = ['Alberta','British Columbia','Manitoba','New Brunswick','Newfoundland & Labrador',
+  'Northwest Territories','Nova Scotia','Nunavut','Ontario','Other','Prince Edward Island',
+  'Quebec','Saskatchewan','Yukon'];
+const VAL_RANGES = ['(b) Less than $10,000','(c) $10,000 - $25,000','(d) $25,000 - $100,000',
+  '(e) $100,000 - $1,000,000','(f) $1,000,000 - $5,000,000','(g) More than $5,000,000'];
+const RECIP_TYPES = ['For-profit organization','Not-for-profit organization or charity',
+  'Indigenous recipients','Government','Academia','Individual or sole proprietorship'];
+
+// ====== INIT FILTERS ======
+function initFilters() {
+  const provDiv = document.getElementById('provFilter');
+  YEAR_PROVS.forEach(p => {
+    const l = document.createElement('label');
+    l.innerHTML = `<input type="checkbox" value="${p}" checked onchange="applyFilters()"> ${p}`;
+    provDiv.appendChild(l);
+  });
+
+  const vrDiv = document.getElementById('vrFilter');
+  VAL_RANGES.forEach(vr => {
+    const l = document.createElement('label');
+    l.innerHTML = `<input type="checkbox" value="${vr}" checked onchange="applyFilters()"> ${vr.replace(/\([a-z]\) /,'')}`;
+    vrDiv.appendChild(l);
+  });
+
+  const rtDiv = document.getElementById('rtFilter');
+  RECIP_TYPES.forEach(rt => {
+    const l = document.createElement('label');
+    l.innerHTML = `<input type="checkbox" value="${rt}" checked onchange="applyFilters()"> ${rt}`;
+    rtDiv.appendChild(l);
+  });
+
+  updateProgCheckboxes();
+}
+
+function updateProgCheckboxes() {
+  if (!DATA) return;
+  const q = document.getElementById('progSearch').value.toLowerCase();
+  const div = document.getElementById('progFilter');
+  
+  // Get top 200 programs by count
+  let progs = DATA.programs_sorted || Object.entries(DATA.programs).sort((a,b) => b[1].count - a[1].count);
+  progs = progs.slice(0, 200);
+  
+  // Get currently checked values
+  const checked = new Set();
+  div.querySelectorAll('input:checked').forEach(cb => checked.add(cb.value));
+  
+  div.innerHTML = '';
+  progs.forEach(([p, _]) => {
+    if (q && !p.toLowerCase().includes(q)) return;
+    const l = document.createElement('label');
+    l.innerHTML = `<input type="checkbox" value="${p}" ${checked.has(p) || (!q && checked.size === 0) ? 'checked' : ''} onchange="applyFilters()"> ${p.length > 50 ? p.slice(0,50)+'...' : p}`;
+    div.appendChild(l);
+  });
+  
+  if (div.children.length === 0) {
+    div.innerHTML = '<div style="color:#999;padding:4px">No programs match</div>';
+  }
+}
+
+// ====== FILTERING LOGIC ======
+function getFilters() {
+  const yearFrom = parseInt(document.getElementById('yearFrom').value) || 2004;
+  const yearTo = parseInt(document.getElementById('yearTo').value) || 2027;
+  const provs = new Set();
+  document.querySelectorAll('#provFilter input:checked').forEach(cb => provs.add(cb.value));
+  const vrs = new Set();
+  document.querySelectorAll('#vrFilter input:checked').forEach(cb => vrs.add(cb.value));
+  const rts = new Set();
+  document.querySelectorAll('#rtFilter input:checked').forEach(cb => rts.add(cb.value));
+  const progs = new Set();
+  document.querySelectorAll('#progFilter input:checked').forEach(cb => progs.add(cb.value));
+  return { yearFrom, yearTo, provs, vrs, rts, progs };
+}
+
+function applyFilters() {
+  if (!DATA) return;
+  const f = getFilters();
+  
+  // Filter top_grants for the table
+  filteredGrants = DATA.top_grants.filter(r => {
+    if (r.yr < f.yearFrom || r.yr > f.yearTo) return false;
+    if (!f.provs.has(r.pr)) return false;
+    if (!f.vrs.has(r.vr) && r.vr) return false;
+    if (!f.rts.has(r.rt)) return false;
+    if (f.progs.size > 0 && !f.progs.has(r.pg)) return false;
+    return true;
+  });
+  
+  // Recompute aggregates from year_prov, year_prog, year_vr
+  updateStats(f);
+  updateYearChart(f);
+  updateProgChart(f);
+  updateValRangeChart(f);
+  updateCitiesChart(f);
+  updateRecipientTypes(f);
+  updateDeptChart(f);
+  updateTop25Chart(f);
+  updateIndustryChart(f);
+  buildCompanyData();
+  updateTable();
+}
+
+// ====== STATS ======
+function updateStats(f) {
+  let count = 0;
+  let total = 0;
+  
+  // Iterate through year_prov to sum
+  for (const [key, val] of Object.entries(DATA.year_prov)) {
+    const [y, p] = key.split('|');
+    const yr = parseInt(y);
+    if (yr < f.yearFrom || yr > f.yearTo) continue;
+    if (!f.provs.has(p)) continue;
+    count += val.count;
+    total += val.total;
+  }
+  
+  document.getElementById('statCount').textContent = count.toLocaleString();
+  document.getElementById('statValue').textContent = FORMAT(total);
+  document.getElementById('statAvg').textContent = count > 0 ? FORMAT(total / count) : '$0';
+  document.getElementById('statRecipients').textContent = DATA.meta.unique_recipients.toLocaleString();
+}
+
+// ====== YEAR CHART ======
+let chartYear = null;
+function updateYearChart(f) {
+  const years = DATA.meta.years.filter(y => y >= f.yearFrom && y <= f.yearTo && y >= 2004 && y <= 2027);
+  const provsInData = YEAR_PROVS.filter(p => f.provs.has(p));
+  
+  // Build datasets
+  const datasets = provsInData.map(prov => {
+    const data = years.map(y => {
+      const key = `${y}|${prov}`;
+      return DATA.year_prov[key] ? DATA.year_prov[key].count : 0;
+    });
+    return {
+      label: prov,
+      data,
+      backgroundColor: getProvColor(prov),
+      borderWidth: 0,
+      stack: 'stack',
+    };
+  });
+  
+  datasets.sort((a,b) => {
+    const sumA = a.data.reduce((s,v) => s+v, 0);
+    const sumB = b.data.reduce((s,v) => s+v, 0);
+    return sumB - sumA;
+  });
+  
+  if (chartYear) chartYear.destroy();
+  const ctx = document.getElementById('chartYear').getContext('2d');
+  chartYear = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: years, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2.5,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8, font: {size:10} } } },
+      scales: {
+        x: { stacked: true, title: { display: true, text: 'Year' } },
+        y: { stacked: true, title: { display: true, text: 'Grants' } }
+      }
+    }
+  });
+}
+
+// ====== PROGRAM CHART ======
+let chartProg = null;
+function updateProgChart(f) {
+  if (!DATA.programs_sorted) return;
+  
+  let progs = DATA.programs_sorted.slice(0, 20);
+  // Filter by programs that have data in our year range (approximate by checking top_grants)
+  const progCount = {};
+  for (const [key, val] of Object.entries(DATA.year_prog)) {
+    const [y, pg] = key.split('|');
+    const yr = parseInt(y);
+    if (yr < f.yearFrom || yr > f.yearTo) continue;
+    if (!f.provs.has('')) { // we need to check province too, but year_prog doesn't have province
+      // Skip province filter for program chart — use overall
+    }
+    progCount[pg] = (progCount[pg] || 0) + val.count;
+  }
+  
+  // Build data from year_prog
+  const progTotals = {};
+  for (const [key, val] of Object.entries(DATA.year_prog)) {
+    const [y, pg] = key.split('|');
+    const yr = parseInt(y);
+    if (yr < f.yearFrom || yr > f.yearTo) continue;
+    if (!f.progs.has(pg) && f.progs.size > 0) continue;
+    progTotals[pg] = (progTotals[pg] || 0) + val.count;
+  }
+  
+  const sorted = Object.entries(progTotals).sort((a,b) => b[1] - a[1]).slice(0, 15);
+  const labels = sorted.map(([p]) => p.length > 35 ? p.slice(0,32)+'...' : p);
+  const values = sorted.map(([_,v]) => v);
+  
+  if (chartProg) chartProg.destroy();
+  const ctx = document.getElementById('chartProg').getContext('2d');
+  chartProg = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Grants', data: values, backgroundColor: '#3949ab' }] },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1.2,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { title: { display: true, text: 'Grants' } },
+        y: { ticks: { font: { size: 9 } } }
+      }
+    }
+  });
+}
+
+// ====== VALUE RANGE CHART ======
+let chartVR = null;
+function updateValRangeChart(f) {
+  const vrTotals = {};
+  VAL_RANGES.forEach(vr => vrTotals[vr] = 0);
+  
+  for (const [key, val] of Object.entries(DATA.year_vr)) {
+    const [y, vr] = key.split('|');
+    const yr = parseInt(y);
+    if (yr < f.yearFrom || yr > f.yearTo) continue;
+    if (!f.vrs.has(vr)) continue;
+    if (vrTotals[vr] !== undefined) vrTotals[vr] += val.count;
+  }
+  
+  const labels = VAL_RANGES.filter(vr => f.vrs.has(vr)).map(vr => vr.replace(/\([a-z]\) /,''));
+  const values = VAL_RANGES.filter(vr => f.vrs.has(vr)).map(vr => vrTotals[vr]);
+  
+  if (chartVR) chartVR.destroy();
+  const ctx = document.getElementById('chartValRange').getContext('2d');
+  chartVR = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: ['#42a5f5','#26a69a','#66bb6a','#ffa726','#ef5350','#ab47bc'] }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 6, font: {size:9} } },
+        tooltip: { callbacks: { label: ctx => ctx.label + ': ' + ctx.parsed.toLocaleString() + ' grants' } }
+      }
+    }
+  });
+}
+
+// ====== CITIES CHART ======
+let chartCities = null;
+function updateCitiesChart(f) {
+  const cityTotals = {};
+  for (const [city, val] of DATA.cities_sorted) {
+    // We can't easily filter by year for cities without that dimension
+    // Use top_grants to estimate
+    cityTotals[city] = val.count;
+  }
+  
+  const sorted = Object.entries(cityTotals).sort((a,b) => b[1] - a[1]).slice(0, 15);
+  const labels = sorted.map(([c]) => c.length > 25 ? c.slice(0,22)+'...' : c);
+  const values = sorted.map(([_,v]) => v);
+  
+  if (chartCities) chartCities.destroy();
+  const ctx = document.getElementById('chartCities').getContext('2d');
+  chartCities = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Grants', data: values, backgroundColor: '#00897b' }] },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2.2,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { title: { display: true, text: 'Grants' } },
+        y: { ticks: { font: { size: 9 } } }
+      }
+    }
+  });
+}
+
+// ====== TABLE ======
+function updateTable() {
+  currentPage = 1;
+  renderTable();
+}
+
+function renderTable() {
+  sortGrants();
+  const totalPages = Math.ceil(filteredGrants.length / PAGE_SIZE) || 1;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page = filteredGrants.slice(start, start + PAGE_SIZE);
+  
+  document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages} (${filteredGrants.length} results)`;
+  document.getElementById('prevPage').disabled = currentPage <= 1;
+  document.getElementById('nextPage').disabled = currentPage >= totalPages;
+  
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  
+  if (page.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#999">No grants match the current filters</td></tr>';
+    return;
+  }
+  
+  page.forEach(r => {
+    const tr = document.createElement('tr');
+    const rtClass = r.rt && r.rt.includes('For-profit') ? 'tag-forprofit' : 'tag-other';
+    tr.innerHTML = `
+      <td>${r.nm}</td>
+      <td class="value-pos">${FORMAT_FULL(r.v)}</td>
+      <td>${r.yr}</td>
+      <td>${r.pr}</td>
+      <td>${r.cy}</td>
+      <td title="${r.pg}">${r.pg.length > 40 ? r.pg.slice(0,37)+'...' : r.pg}</td>
+      <td><span class="tag ${rtClass}">${r.rt && r.rt.includes('For-profit') ? 'For-profit' : 'Other'}</span></td>
+      <td>${r.vr ? r.vr.replace(/\([a-z]\) /,'') : ''}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function changePage(delta) {
+  const totalPages = Math.ceil(filteredGrants.length / PAGE_SIZE) || 1;
+  currentPage = Math.max(1, Math.min(totalPages, currentPage + delta));
+  renderTable();
+}
+
+let sortAsc = false;
+
+// ====== RECIPIENT TYPES CHART ======
+function updateRecipientTypes(f) {
+  const byRt = {};
+  filteredGrants.forEach(g => {
+    const rt = g.rt || 'Unknown';
+    if (!byRt[rt]) byRt[rt] = {c:0, v:0};
+    byRt[rt].c++; byRt[rt].v += g.v;
+  });
+  let arr = Object.entries(byRt).map(([k,v]) => ({name: k, ...v}));
+  arr.sort((a,b) => b.v - a.v);
+  const cutoff = arr.reduce((s,x) => s + x.v, 0) * 0.03;
+  let main = [], other = {name:'Other', c:0, v:0};
+  arr.forEach(x => {
+    if (x.v >= cutoff && x.name !== '-') main.push(x);
+    else { other.c += x.c; other.v += x.v; }
+  });
+  if (other.c > 0) main.push(other);
+  const clr = ['#1a237e','#283593','#3949ab','#5c6bc0','#7986cb','#9fa8da','#c5cae9','#e53935','#43a047','#fb8c00','#8e24aa','#00acc1'];
+  const ctx = document.getElementById('chartRT');
+  if (window._rtChart) window._rtChart.destroy();
+  window._rtChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: main.map(x => x.name.replace(/ or .*$/, '\u2026')), datasets: [{ data: main.map(x => x.v), backgroundColor: clr.slice(0,main.length), borderWidth:0 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position:'right', labels:{boxWidth:12,font:{size:11}} }, tooltip: { callbacks: { label: c => { const d = main[c.dataIndex]; return c.label + ': $' + d.v.toLocaleString() + ' (' + d.c + ' grants)'; } } } } }
+  });
+}
+
+// ====== DEPARTMENTS CHART ======
+function updateDeptChart(f) {
+  const byDp = {};
+  filteredGrants.forEach(g => {
+    const dp = g.dp || 'Unknown';
+    if (!byDp[dp]) byDp[dp] = {c:0, v:0};
+    byDp[dp].c++; byDp[dp].v += g.v;
+  });
+  let deps = Object.entries(byDp).map(([k,v]) => ({name: k, ...v}));
+  deps.sort((a,b) => b.v - a.v).splice(15);
+  const ctx = document.getElementById('chartDept');
+  if (window._deptChart) window._deptChart.destroy();
+  window._deptChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: deps.map(x => x.name.replace(/\s+\w*$/, '').substring(0,30)), datasets: [{ data: deps.map(x => x.v), backgroundColor: ['#1a237e','#283593','#3949ab','#5c6bc0','#7986cb','#9fa8da','#c5cae9','#e53935','#43a047','#fb8c00','#8e24aa','#00acc1','#6d4c41','#546e7a','#d81b60'], borderRadius:3 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => { const d = deps[c.dataIndex]; return d.name.substring(0,50) + ': $' + d.v.toLocaleString() + ' (' + d.c + ' grants)'; } } } }, scales: { y: { ticks: { callback: v => '$' + (v/1e9).toFixed(1) + 'B' } } } }
+  });
+}
+
+// ====== TOP 25 GRANTS ======
+function updateTop25Chart(f) {
+  const sorted = [...filteredGrants].sort((a,b) => b.v - a.v).slice(0,25);
+  const ctx = document.getElementById('chartTop25');
+  if (window._t25Chart) window._t25Chart.destroy();
+  window._t25Chart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: sorted.map((x,i) => '#' + (i+1)), datasets: [{ data: sorted.map(x => x.v), backgroundColor: '#43a047', borderRadius:3 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => { const d = sorted[c.dataIndex]; return d.nm + ': $' + d.v.toLocaleString() + ' \\u2014 ' + (d.pg || '').substring(0,40); } } } }, scales: { y: { ticks: { callback: v => '$' + (v/1e9).toFixed(1) + 'B' } } } }
+  });
+}
+
+
+// ====== INDUSTRY SPLIT (derived from program names) ======
+const PROG_INDUSTRY = [
+  [/\b(Clean|Zero Emissions|Renewable|Climate|Electrification|2 Billion Trees|Retrofit|Clean Fuels|Green|Environmental|Agricultural Clean Tech)\b/i, 'Clean Tech / Climate'],
+  [/\b(Energy Innovation|Energy|Smart Renewables|Fuels|Mining|Oil|Gas|Pipeline|Power)\b/i, 'Energy / Resources'],
+  [/\b(Agricultural|Agri[- ]|Food|Farm|Fisher|Aquacult|Forest|Bio(product|mass|economy))\b/i, 'Agriculture / Forestry'],
+  [/\b(Health|Drugs|Medical|Hospitals|Rare Disease|BioInnovation|Life Sciences|Pharma)\b/i, 'Health / Life Sciences'],
+  [/\b(IRAP|Innovation|Research Assistance|Diversification|R&D|Clusters|SIF |Stream |SSF|CanExport|Science|Technology|Digital|Broadband|Universal Broadband)\b/i, 'R&D / Innovation'],
+  [/\b(Infrastructure|Housing|Building Canada|Water|Wastewater|Community Infrastruct|Transit|Public Transit)\b/i, 'Infrastructure / Housing'],
+  [/\b(Indigenous|Aboriginal|First Nations|Inuit|M\u00e9tis|Settlement|Resettlement|Language|Official Language|Multiculturalism|Treaties)\b/i, 'Indigenous / Social'],
+  [/\b(Social|Child and Family|Victims|Justice|Policing|Gun|Violence|Legal Aid|Crime|Safety|Security)\b/i, 'Social / Justice'],
+  [/\b(Youth|Employment|Student|Job|Work|Placement|Skills|Summer Jobs)\b/i, 'Youth / Employment'],
+  [/\b(Education|School|University|College)\b/i, 'Education'],
+  [/\b(Transport|Trade Corridor|National Trade|Marine|Port|Shipping|Aviation|Rail|Road)\b/i, 'Transport / Trade'],
+];
+function progIndustry(pg) {
+  if (!pg || pg === '-') return 'Uncategorized';
+  for (const [re, industry] of PROG_INDUSTRY) {
+    if (re.test(pg)) return industry;
+  }
+  return 'Other Programs';
+}
+
+function updateIndustryChart(f) {
+  const byInd = {};
+  filteredGrants.forEach(g => {
+    const ind = progIndustry(g.pg);
+    if (!byInd[ind]) byInd[ind] = {c:0, v:0};
+    byInd[ind].c++; byInd[ind].v += g.v;
+  });
+  let arr = Object.entries(byInd).map(([k,v]) => ({name: k, ...v}));
+  arr.sort((a,b) => b.v - a.v);
+  const clr = ['#1a237e','#283593','#3949ab','#5c6bc0','#7986cb','#9fa8da','#c5cae9','#e53935','#43a047','#fb8c00','#8e24aa','#00acc1','#6d4c41'];
+  const ctx = document.getElementById('chartIndustry');
+  if (window._indChart) window._indChart.destroy();
+  window._indChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: arr.map(x => x.name), datasets: [{ data: arr.map(x => x.v), backgroundColor: clr.slice(0,arr.length), borderRadius:3 }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => { const d = arr[c.dataIndex]; return d.name + ': $' + d.v.toLocaleString() + ' (' + d.c + ' grants)'; } } } }, scales: { x: { ticks: { callback: v => '$' + (v/1e9).toFixed(1) + 'B' } } } }
+  });
+}
+function sortTable(key) {
+  if (sortKey === key) {
+    sortAsc = !sortAsc;
+  } else {
+    sortKey = key;
+    sortAsc = key === 'v' ? false : true; // default: values descending, text ascending
+  }
+  renderTable();
+}
+
+function sortGrants() {
+  filteredGrants.sort((a, b) => {
+    let va = a[sortKey], vb = b[sortKey];
+    if (sortKey === 'v') {
+      return sortAsc ? va - vb : vb - va;
+    }
+    va = (va || '').toString().toLowerCase();
+    vb = (vb || '').toString().toLowerCase();
+    return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+}
+
+// ====== COLORS ======
+const PROV_COLORS = {
+  'Alberta':'#2196f3','British Columbia':'#4caf50','Ontario':'#ff9800','Quebec':'#e91e63',
+  'Manitoba':'#9c27b0','Saskatchewan':'#00bcd4','Nova Scotia':'#ff5722','New Brunswick':'#795548',
+  'Newfoundland & Labrador':'#607d8b','Prince Edward Island':'#cddc39','Nunavut':'#03a9f4',
+  'Northwest Territories':'#009688','Yukon':'#8bc34a','Other':'#9e9e9e'
+};
+function getProvColor(p) { return PROV_COLORS[p] || '#9e9e9e'; }
+
+// ====== INIT ======
+function initDashboard() {
+  initFilters();
+  applyFilters();
+  
+  document.querySelectorAll('#yearFrom, #yearTo').forEach(el => {
+    el.addEventListener('change', applyFilters);
+    el.addEventListener('input', applyFilters);
+  });
+}
+
+// ====== COMPANY AGGREGATION ======
+let companyData = [];
+let sortedCompanies = [];
+let compPage = 1;
+const COMP_PAGE_SIZE = 50;
+let compSortKey = 'v';
+let compSortAsc = false;
+
+function buildCompanyData() {
+  const byNm = {};
+  filteredGrants.forEach(g => {
+    const nm = g.nm || 'Unknown';
+    if (!byNm[nm]) byNm[nm] = {c:0, v:0, progs: {}};
+    byNm[nm].c++;
+    byNm[nm].v += g.v;
+    byNm[nm].progs[g.pg || '-'] = (byNm[nm].progs[g.pg || '-'] || 0) + 1;
+  });
+  companyData = Object.entries(byNm).map(([nm, d]) => ({
+    nm, c: d.c, v: d.v, avg: d.v / d.c,
+    topProg: Object.entries(d.progs).sort((a,b) => b[1] - a[1])[0][0]
+  }));
+  sortCompanies();
+}
+
+function sortCompanies() {
+  sortedCompanies = [...companyData].sort((a, b) => {
+    const mul = compSortAsc ? 1 : -1;
+    if (compSortKey === 'nm') return mul * a.nm.localeCompare(b.nm);
+    if (compSortKey === 'c') return mul * (a.c - b.c);
+    if (compSortKey === 'avg') return mul * (a.avg - b.avg);
+    return mul * (a.v - b.v);
+  });
+  compPage = 1;
+  renderCompanyTable();
+}
+
+function sortCompanyTable(key) {
+  if (compSortKey === key) compSortAsc = !compSortAsc;
+  else { compSortKey = key; compSortAsc = false; }
+  sortCompanies();
+}
+
+function renderCompanyTable() {
+  const total = sortedCompanies.length;
+  const totalPages = Math.ceil(total / COMP_PAGE_SIZE) || 1;
+  compPage = Math.min(compPage, totalPages);
+  const start = (compPage - 1) * COMP_PAGE_SIZE;
+  const page = sortedCompanies.slice(start, start + COMP_PAGE_SIZE);
+  
+  document.getElementById('compPageInfo').textContent = `Page ${compPage} of ${totalPages} (${total} companies)`;
+  document.getElementById('compPrevPage').disabled = compPage <= 1;
+  document.getElementById('compNextPage').disabled = compPage >= totalPages;
+  
+  const tbody = document.getElementById('companyBody');
+  tbody.innerHTML = page.map(r => 
+    '<tr><td>' + $esc(r.nm) + '</td>'
+    + '<td style="text-align:right;font-weight:600" class="value-pos">' + FORMAT(r.v) + '</td>'
+    + '<td style="text-align:right">' + r.c.toLocaleString() + '</td>'
+    + '<td style="text-align:right">' + FORMAT(r.avg) + '</td>'
+    + '<td style="font-size:11px;color:#666">' + $esc(r.topProg.substring(0,45) + (r.topProg.length > 45 ? '...' : '')) + '</td></tr>'
+  ).join('');
+}
+
+function changeCompPage(delta) {
+  compPage = Math.max(1, compPage + delta);
+  renderCompanyTable();
+}
+
+function $esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
