@@ -685,7 +685,9 @@ function updateDeptChart(f) {
     data: { labels: deps.map(x => x.name.replace(/\s+\w*$/, '').substring(0,30)), datasets: [{ data: deps.map(x => x.v), backgroundColor: ['#1a237e','#283593','#3949ab','#5c6bc0','#7986cb','#9fa8da','#c5cae9','#e53935','#43a047','#fb8c00','#8e24aa','#00acc1','#6d4c41','#546e7a','#d81b60'], borderRadius:3 }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => { const d = deps[c.dataIndex]; return d.name.substring(0,50) + ': $' + d.v.toLocaleString() + ' (' + d.c + ' grants)'; } } } }, scales: { y: { ticks: { callback: v => '$' + (v/1e9).toFixed(1) + 'B' } } } }
   });
-}\n\n\n// ====== INDUSTRY SPLIT (derived from program names) ======
+}
+
+// ====== INDUSTRY SPLIT (derived from program names) ======
 const PROG_INDUSTRY = [
   [/\b(Clean|Zero Emissions|Renewable|Climate|Electrification|2 Billion Trees|Retrofit|Clean Fuels|Green|Environmental|Agricultural Clean Tech)\b/i, 'Clean Tech / Climate'],
   [/\b(Energy Innovation|Energy|Smart Renewables|Fuels|Mining|Oil|Gas|Pipeline|Power)\b/i, 'Energy / Resources'],
