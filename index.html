@@ -102,9 +102,9 @@ tr:nth-child(even):hover td{background:#f0f0ff}
     <div class="note">Data from GC Grants open-data portal bulk export. Live search at <a href="https://search.open.canada.ca/grants/" target="_blank">search.open.canada.ca</a> reports <strong>1,173,296</strong> records as of May 2026 — bulk export counts may differ slightly due to snapshot timing.</div>
 
     <div class="chart-grid">
-      <div class="chart-card full"><h3>Grants by Year (stacked by Province)</h3><canvas id="chartYear"></canvas></div>
-      <div class="chart-card"><h3>Top Programs</h3><canvas id="chartProg"></canvas></div>
-      <div class="chart-card"><h3>Value Distribution</h3><canvas id="chartValRange"></canvas></div>
+      <div class="chart-card full"><h3>Grants by Year (# of Grants)</h3><canvas id="chartYear"></canvas></div>
+      <div class="chart-card"><h3>Top Programs by # of Grants</h3><canvas id="chartProg"></canvas></div>
+      <div class="chart-card"><h3>Grants by Value Range (# of Grants)</h3><canvas id="chartValRange"></canvas></div>
       <div class="chart-card"><h3>Top Provinces by # of Grants</h3><canvas id="chartProvinces"></canvas></div>
       <div class="chart-card"><h3>Top Cities by # of Grants</h3><canvas id="chartCities"></canvas></div>
     </div>
@@ -113,18 +113,18 @@ tr:nth-child(even):hover td{background:#f0f0ff}
       <div class="chart-card"><h3>Top Cities by Total Funding ($CAD)</h3><canvas id="chartCityFunding"></canvas></div>
     </div>
     <div class="chart-grid">
-      <div class="chart-card"><h3>Recipient Types</h3><canvas id="chartRT" style="max-height:350px"></canvas></div>
-      <div class="chart-card"><h3>Federal Departments (top 15)</h3><canvas id="chartDept" style="max-height:350px"></canvas></div>
-      <div class="chart-card full"><h3>Top 25 Grants by Value</h3><canvas id="chartTop25" style="max-height:300px"></canvas></div>
+      <div class="chart-card"><h3>Recipients by Type (# of Grants)</h3><canvas id="chartRT" style="max-height:350px"></canvas></div>
+      <div class="chart-card"><h3>Federal Departments by # of Grants</h3><canvas id="chartDept" style="max-height:350px"></canvas></div>
+      <div class="chart-card full"><h3>Top 25 Grants by Value ($CAD)</h3><canvas id="chartTop25" style="max-height:300px"></canvas></div>
     </div>
 
     <div class="chart-card" style="margin-bottom:20px">
-      <h3>Industry Split</h3>
+      <h3>Industry Split (# of Grants)</h3>
       <canvas id="chartIndustry" style="max-height:400px;margin-bottom:0"></canvas>
     </div>
 
     <div class="chart-card" style="margin-bottom:20px">
-      <h3>Top Grants by Value</h3>
+      <h3>Top Grants by Value ($CAD)</h3>
       <div class="page-controls">
         <button id="prevPage" onclick="changePage(-1)" disabled>←</button>
         <span id="pageInfo">Page 1</span>
@@ -151,7 +151,7 @@ tr:nth-child(even):hover td{background:#f0f0ff}
     </div>
 
     <div class="chart-card" style="margin-bottom:20px">
-      <h3>Top Companies by Total Value</h3>
+      <h3>Top Companies by Total Value ($CAD)</h3>
       <div class="page-controls">
         <button id="compPrevPage" onclick="changeCompPage(-1)" disabled>&larr;</button>
         <span id="compPageInfo">Page 1</span>
