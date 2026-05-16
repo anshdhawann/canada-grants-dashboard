@@ -793,18 +793,7 @@ let compSortKey = 'v';
 let compSortAsc = false;
 
 function buildCompanyData() {
-  const byNm = {};
-  filteredGrants.forEach(g => {
-    const nm = g.nm || 'Unknown';
-    if (!byNm[nm]) byNm[nm] = {c:0, v:0, progs: {}};
-    byNm[nm].c++;
-    byNm[nm].v += g.v;
-    byNm[nm].progs[g.pg || '-'] = (byNm[nm].progs[g.pg || '-'] || 0) + 1;
-  });
-  companyData = Object.entries(byNm).map(([nm, d]) => ({
-    nm, c: d.c, v: d.v, avg: d.v / d.c,
-    topProg: Object.entries(d.progs).sort((a,b) => b[1] - a[1])[0][0]
-  }));
+  companyData = DATA.top_companies.map(r => ({...r}));
   sortCompanies();
 }
 
