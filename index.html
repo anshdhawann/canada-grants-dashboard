@@ -113,6 +113,11 @@ tr:nth-child(even):hover td{background:#f0f0ff}
       <div class="chart-card"><h3>Top Cities by Total Funding ($CAD)</h3><canvas id="chartCityFunding"></canvas></div>
     </div>
     <div class="chart-grid">
+      <div class="chart-card full"><h3>Funding by Year ($CAD)</h3><canvas id="chartYearVal"></canvas></div>
+      <div class="chart-card"><h3>Top Programs by Total Funding ($CAD)</h3><canvas id="chartProgFunding"></canvas></div>
+      <div class="chart-card"><h3>Funding by Value Range ($CAD)</h3><canvas id="chartVRVal"></canvas></div>
+    </div>
+    <div class="chart-grid">
       <div class="chart-card"><h3>Recipients by Type (# of Grants)</h3><canvas id="chartRT" style="max-height:350px"></canvas></div>
       <div class="chart-card"><h3>Federal Departments by # of Grants</h3><canvas id="chartDept" style="max-height:350px"></canvas></div>
     </div>
@@ -297,6 +302,9 @@ function applyFilters() {
   updateCitiesChart(f);
   updateProvFundingChart(f);
   updateCityFundingChart(f);
+  updateYearValChart(f);
+  updateProgFundingChart(f);
+  updateVRValChart(f);
   updateRecipientTypes(f);
   updateDeptChart(f);
   updateIndustryChart(f);
@@ -587,6 +595,105 @@ function updateCityFundingChart(f) {
       scales: {
         x: { title: { display: true, text: 'Total ($CAD)' }, ticks: { callback: v => '$' + (v/1e6).toFixed(1) + 'M' } },
         y: { ticks: { font: { size: 9 } } }
+      }
+    }
+  });
+}
+
+// ====== FUNDING BY YEAR CHART ($CAD) ======
+let chartYearVal = null;
+function updateYearValChart(f) {
+  const years = DATA.meta.years.filter(y => y >= f.yearFrom && y <= f.yearTo && y >= 2004 && y <= 2027);
+  const provsInData = YEAR_PROVS.filter(p => f.provs.has(p));
+  const datasets = provsInData.map(prov => {
+    const data = years.map(y => {
+      const key = `${y}|${prov}`;
+      return DATA.year_prov[key] ? DATA.year_prov[key].total : 0;
+    });
+    return { label: prov, data, backgroundColor: getProvColor(prov), borderWidth: 0, stack: 'stack' };
+  });
+  datasets.sort((a,b) => {
+    const sumA = a.data.reduce((s,v) => s+v, 0);
+    const sumB = b.data.reduce((s,v) => s+v, 0);
+    return sumB - sumA;
+  });
+  if (chartYearVal) chartYearVal.destroy();
+  const ctx = document.getElementById('chartYearVal').getContext('2d');
+  chartYearVal = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: years, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: true, aspectRatio: 2.5,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8, font: {size:10} } },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toLocaleString() } }
+      },
+      scales: {
+        x: { stacked: true, title: { display: true, text: 'Year' } },
+        y: { stacked: true, title: { display: true, text: 'Total ($CAD)' }, ticks: { callback: v => '$' + (v/1e9).toFixed(1) + 'B' } }
+      }
+    }
+  });
+}
+
+// ====== PROGRAMS BY FUNDING CHART ($CAD) ======
+let chartProgFunding = null;
+function updateProgFundingChart(f) {
+  if (!DATA.programs_sorted) return;
+  const progTotal = {};
+  for (const [key, val] of Object.entries(DATA.year_prog)) {
+    const [y, pg] = key.split('|');
+    const yr = parseInt(y);
+    if (yr < f.yearFrom || yr > f.yearTo) continue;
+    progTotal[pg] = (progTotal[pg] || 0) + val.total;
+  }
+  const sorted = Object.entries(progTotal).sort((a,b) => b[1] - a[1]).slice(0, 15);
+  const labels = sorted.map(([p]) => p.length > 35 ? p.slice(0,32)+'...' : p);
+  const values = sorted.map(([_,v]) => v);
+  if (chartProgFunding) chartProgFunding.destroy();
+  const ctx = document.getElementById('chartProgFunding').getContext('2d');
+  chartProgFunding = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Funding', data: values, backgroundColor: '#3949ab' }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: true, aspectRatio: 1.2,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.x.toLocaleString() } }
+      },
+      scales: {
+        x: { title: { display: true, text: 'Total ($CAD)' }, ticks: { callback: v => '$' + (v/1e9).toFixed(1) + 'B' } },
+        y: { ticks: { font: { size: 9 } } }
+      }
+    }
+  });
+}
+
+// ====== VALUE RANGE BY FUNDING CHART ($CAD) ======
+let chartVRVal = null;
+function updateVRValChart(f) {
+  const vrTotals = {};
+  VAL_RANGES.forEach(vr => vrTotals[vr] = 0);
+  for (const [key, val] of Object.entries(DATA.year_vr)) {
+    const [y, vr] = key.split('|');
+    const yr = parseInt(y);
+    if (yr < f.yearFrom || yr > f.yearTo) continue;
+    if (!f.vrs.has(vr)) continue;
+    if (vrTotals[vr] !== undefined) vrTotals[vr] += val.total;
+  }
+  const labels = VAL_RANGES.filter(vr => f.vrs.has(vr)).map(vr => vr.replace(/\([a-z]\) /,''));
+  const values = VAL_RANGES.filter(vr => f.vrs.has(vr)).map(vr => vrTotals[vr]);
+  if (chartVRVal) chartVRVal.destroy();
+  const ctx = document.getElementById('chartVRVal').getContext('2d');
+  chartVRVal = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: ['#42a5f5','#26a69a','#66bb6a','#ffa726','#ef5350','#ab47bc'] }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 6, font: {size:9} } },
+        tooltip: { callbacks: { label: ctx => ctx.label + ': $' + (ctx.parsed / 1e9).toFixed(2) + 'B' } }
       }
     }
   });
