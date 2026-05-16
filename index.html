@@ -105,8 +105,12 @@ tr:nth-child(even):hover td{background:#f0f0ff}
       <div class="chart-card full"><h3>Grants by Year (stacked by Province)</h3><canvas id="chartYear"></canvas></div>
       <div class="chart-card"><h3>Top Programs</h3><canvas id="chartProg"></canvas></div>
       <div class="chart-card"><h3>Value Distribution</h3><canvas id="chartValRange"></canvas></div>
-      <div class="chart-card"><h3>Top Provinces</h3><canvas id="chartProvinces"></canvas></div>
-      <div class="chart-card"><h3>Top Cities</h3><canvas id="chartCities"></canvas></div>
+      <div class="chart-card"><h3>Top Provinces by # of Grants</h3><canvas id="chartProvinces"></canvas></div>
+      <div class="chart-card"><h3>Top Cities by # of Grants</h3><canvas id="chartCities"></canvas></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card"><h3>Top Provinces by Total Funding ($CAD)</h3><canvas id="chartProvFunding"></canvas></div>
+      <div class="chart-card"><h3>Top Cities by Total Funding ($CAD)</h3><canvas id="chartCityFunding"></canvas></div>
     </div>
     <div class="chart-grid">
       <div class="chart-card"><h3>Recipient Types</h3><canvas id="chartRT" style="max-height:350px"></canvas></div>
@@ -292,6 +296,8 @@ function applyFilters() {
   updateProgChart(f);
   updateValRangeChart(f);
   updateCitiesChart(f);
+  updateProvFundingChart(f);
+  updateCityFundingChart(f);
   updateRecipientTypes(f);
   updateDeptChart(f);
   updateTop25Chart(f);
@@ -514,6 +520,74 @@ function updateCitiesChart(f) {
       plugins: { legend: { display: false } },
       scales: {
         x: { title: { display: true, text: 'Grants' } },
+        y: { ticks: { font: { size: 9 } } }
+      }
+    }
+  });
+}
+
+// ====== PROVINCES FUNDING CHART ======
+let chartProvFunding = null;
+function updateProvFundingChart(f) {
+  const provTotals = {};
+  for (const [key, val] of Object.entries(DATA.year_prov)) {
+    const [y, prov] = key.split('|');
+    const yr = parseInt(y);
+    if (yr < f.yearFrom || yr > f.yearTo) continue;
+    if (!f.provs.has(prov)) continue;
+    provTotals[prov] = (provTotals[prov] || 0) + val.total;
+  }
+  const sorted = Object.entries(provTotals).sort((a,b) => b[1] - a[1]);
+  const labels = sorted.map(([p]) => p);
+  const values = sorted.map(([_,v]) => v);
+  
+  if (chartProvFunding) chartProvFunding.destroy();
+  const ctx = document.getElementById('chartProvFunding').getContext('2d');
+  chartProvFunding = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Funding', data: values, backgroundColor: '#ef5350' }] },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1.2,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: ctx => '$' + (ctx.parsed.x / 1e6).toFixed(1) + 'M' } }
+      },
+      scales: {
+        x: { title: { display: true, text: 'Total ($CAD)' }, ticks: { callback: v => '$' + (v/1e6).toFixed(1) + 'M' } },
+        y: { ticks: { font: { size: 9 } } }
+      }
+    }
+  });
+}
+
+// ====== CITIES FUNDING CHART ======
+let chartCityFunding = null;
+function updateCityFundingChart(f) {
+  const cityTotals = {};
+  for (const [city, val] of DATA.cities_sorted) {
+    cityTotals[city] = val.total;
+  }
+  const sorted = Object.entries(cityTotals).sort((a,b) => b[1] - a[1]).slice(0, 15);
+  const labels = sorted.map(([c]) => c.length > 25 ? c.slice(0,22)+'...' : c);
+  const values = sorted.map(([_,v]) => v);
+  
+  if (chartCityFunding) chartCityFunding.destroy();
+  const ctx = document.getElementById('chartCityFunding').getContext('2d');
+  chartCityFunding = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Funding', data: values, backgroundColor: '#ab47bc' }] },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1.2,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: ctx => '$' + (ctx.parsed.x / 1e6).toFixed(1) + 'M' } }
+      },
+      scales: {
+        x: { title: { display: true, text: 'Total ($CAD)' }, ticks: { callback: v => '$' + (v/1e6).toFixed(1) + 'M' } },
         y: { ticks: { font: { size: 9 } } }
       }
     }
