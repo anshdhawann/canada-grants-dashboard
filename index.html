@@ -115,7 +115,6 @@ tr:nth-child(even):hover td{background:#f0f0ff}
     <div class="chart-grid">
       <div class="chart-card"><h3>Recipients by Type (# of Grants)</h3><canvas id="chartRT" style="max-height:350px"></canvas></div>
       <div class="chart-card"><h3>Federal Departments by # of Grants</h3><canvas id="chartDept" style="max-height:350px"></canvas></div>
-      <div class="chart-card full"><h3>Top 25 Grants by Value ($CAD)</h3><canvas id="chartTop25" style="max-height:500px"></canvas></div>
     </div>
 
     <div class="chart-card" style="margin-bottom:20px">
@@ -300,7 +299,6 @@ function applyFilters() {
   updateCityFundingChart(f);
   updateRecipientTypes(f);
   updateDeptChart(f);
-  updateTop25Chart(f);
   updateIndustryChart(f);
   buildCompanyData();
   updateTable();
@@ -687,22 +685,7 @@ function updateDeptChart(f) {
     data: { labels: deps.map(x => x.name.replace(/\s+\w*$/, '').substring(0,30)), datasets: [{ data: deps.map(x => x.v), backgroundColor: ['#1a237e','#283593','#3949ab','#5c6bc0','#7986cb','#9fa8da','#c5cae9','#e53935','#43a047','#fb8c00','#8e24aa','#00acc1','#6d4c41','#546e7a','#d81b60'], borderRadius:3 }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => { const d = deps[c.dataIndex]; return d.name.substring(0,50) + ': $' + d.v.toLocaleString() + ' (' + d.c + ' grants)'; } } } }, scales: { y: { ticks: { callback: v => '$' + (v/1e9).toFixed(1) + 'B' } } } }
   });
-}
-
-// ====== TOP 25 GRANTS ======
-function updateTop25Chart(f) {
-  const sorted = [...filteredGrants].sort((a,b) => b.v - a.v).slice(0,25);
-  const ctx = document.getElementById('chartTop25');
-  if (window._t25Chart) window._t25Chart.destroy();
-  window._t25Chart = new Chart(ctx, {
-    type: 'bar',
-    data: { labels: sorted.map(x => x.nm.length > 30 ? x.nm.slice(0,27)+'...' : x.nm), datasets: [{ data: sorted.map(x => x.v), backgroundColor: '#43a047', borderRadius:3 }] },
-    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true, aspectRatio: 1.5, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => { const d = sorted[c.dataIndex]; return d.nm + ': $' + d.v.toLocaleString() + ' — ' + (d.pg || '').substring(0,60); } } } }, scales: { x: { title: { display: true, text: 'Value ($CAD)' }, ticks: { callback: v => '$' + (v/1e6).toFixed(1) + 'M' } }, y: { ticks: { font: { size: 9 } } } } }
-  });
-}
-
-
-// ====== INDUSTRY SPLIT (derived from program names) ======
+}\n\n\n// ====== INDUSTRY SPLIT (derived from program names) ======
 const PROG_INDUSTRY = [
   [/\b(Clean|Zero Emissions|Renewable|Climate|Electrification|2 Billion Trees|Retrofit|Clean Fuels|Green|Environmental|Agricultural Clean Tech)\b/i, 'Clean Tech / Climate'],
   [/\b(Energy Innovation|Energy|Smart Renewables|Fuels|Mining|Oil|Gas|Pipeline|Power)\b/i, 'Energy / Resources'],
