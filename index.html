@@ -52,6 +52,8 @@ tr:nth-child(even):hover td{background:#f0f0ff}
 .tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:500;margin:0 2px}
 .tag-forprofit{background:#e3f2fd;color:#1565c0}
 .tag-other{background:#f3e5f5;color:#7b1fa2}
+.note{font-size:11px;color:#888;margin:-12px 0 20px;padding:0 4px}
+.note a{color:#1a237e}
 @media(max-width:900px){
   .layout{flex-direction:column}
   .sidebar{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid #ddd;max-height:300px}
@@ -97,6 +99,7 @@ tr:nth-child(even):hover td{background:#f0f0ff}
       <div class="stat-card"><div class="label">Avg Grant</div><div class="value" id="statAvg">—</div><div class="sub">per filtered</div></div>
       <div class="stat-card"><div class="label">Recipients</div><div class="value" id="statRecipients">—</div><div class="sub">unique companies</div></div>
     </div>
+    <div class="note">Data from GC Grants open-data portal bulk export. Live search at <a href="https://search.open.canada.ca/grants/" target="_blank">search.open.canada.ca</a> reports <strong>1,173,296</strong> records as of May 2026 — bulk export counts may differ slightly due to snapshot timing.</div>
 
     <div class="chart-grid">
       <div class="chart-card full"><h3>Grants by Year (stacked by Province)</h3><canvas id="chartYear"></canvas></div>
