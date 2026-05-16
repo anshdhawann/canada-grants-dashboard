@@ -105,7 +105,8 @@ tr:nth-child(even):hover td{background:#f0f0ff}
       <div class="chart-card full"><h3>Grants by Year (stacked by Province)</h3><canvas id="chartYear"></canvas></div>
       <div class="chart-card"><h3>Top Programs</h3><canvas id="chartProg"></canvas></div>
       <div class="chart-card"><h3>Value Distribution</h3><canvas id="chartValRange"></canvas></div>
-      <div class="chart-card full"><h3>Top Cities</h3><canvas id="chartCities"></canvas></div>
+      <div class="chart-card"><h3>Top Provinces</h3><canvas id="chartProvinces"></canvas></div>
+      <div class="chart-card"><h3>Top Cities</h3><canvas id="chartCities"></canvas></div>
     </div>
     <div class="chart-grid">
       <div class="chart-card"><h3>Recipient Types</h3><canvas id="chartRT" style="max-height:350px"></canvas></div>
@@ -287,6 +288,7 @@ function applyFilters() {
   // Recompute aggregates from year_prov, year_prog, year_vr
   updateStats(f);
   updateYearChart(f);
+  updateProvincesChart(f);
   updateProgChart(f);
   updateValRangeChart(f);
   updateCitiesChart(f);
@@ -359,6 +361,40 @@ function updateYearChart(f) {
       scales: {
         x: { stacked: true, title: { display: true, text: 'Year' } },
         y: { stacked: true, title: { display: true, text: 'Grants' } }
+      }
+    }
+  });
+}
+
+// ====== PROVINCES CHART ======
+let chartProvinces = null;
+function updateProvincesChart(f) {
+  const provTotals = {};
+  for (const [key, val] of Object.entries(DATA.year_prov)) {
+    const [y, prov] = key.split('|');
+    const yr = parseInt(y);
+    if (yr < f.yearFrom || yr > f.yearTo) continue;
+    if (!f.provs.has(prov)) continue;
+    provTotals[prov] = (provTotals[prov] || 0) + val.count;
+  }
+  const sorted = Object.entries(provTotals).sort((a,b) => b[1] - a[1]);
+  const labels = sorted.map(([p]) => p);
+  const values = sorted.map(([_,v]) => v);
+  
+  if (chartProvinces) chartProvinces.destroy();
+  const ctx = document.getElementById('chartProvinces').getContext('2d');
+  chartProvinces = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Grants', data: values, backgroundColor: '#26a69a' }] },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1.2,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { title: { display: true, text: 'Grants' } },
+        y: { ticks: { font: { size: 9 } } }
       }
     }
   });
