@@ -1,5 +1,7 @@
 # Canada Federal Grants Dashboard
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-anshdhawann.github.io-blue?style=for-the-badge&logo=github)](https://anshdhawann.github.io/canada-grants-dashboard/)
+
 Interactive dashboard analyzing Canadian federal grants and contributions data (2004–2027). Built with Chart.js, runs entirely in the browser — no server required.
 
 ## Dataset
@@ -18,7 +20,9 @@ Interactive dashboard analyzing Canadian federal grants and contributions data (
 
 ## Usage
 
-Open `index.html` in any browser. All data is pre-loaded — no backend, no API keys, no network calls (after initial page load).
+**Live:** [anshdhawann.github.io/canada-grants-dashboard/](https://anshdhawann.github.io/canada-grants-dashboard/)
+
+**Locally:** Open `index.html` in any browser. All data is pre-loaded — no backend, no API keys, no network calls (after initial page load).
 
 ## Files
 
