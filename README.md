@@ -6,14 +6,14 @@ Interactive dashboard analyzing Canadian federal grants and contributions data (
 
 ## Dataset
 
-- **670,735** grant/contribution records
-- **$569B** total value
-- **396,483** unique recipients
+- **950,000+** grant/contribution records
+- **$542B+** total value
+- **414,000+** unique recipients
 - Source: [Government of Canada Grants & Contributions Open Data](https://search.open.canada.ca/grants/)
 
 ## Features
 
-- **7 interactive charts**: Yearly trends, top programs, value distribution, top cities, recipient types, federal departments, industry split
+- **13 interactive charts**: Yearly trends (count & value), top programs, value distribution, top provinces & cities, recipient types, federal departments, industry split
 - **Sidebar filters**: Year range, province, value range, recipient type, program search
 - **Sortable tables**: Top grants by value, top companies by total value
 - **Data-derived industry mapping**: Programs auto-categorized into Clean Tech, Energy, Health, R&D/Innovation, Agriculture, Infrastructure, and more

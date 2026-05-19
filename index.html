@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Federal Grants Dashboard</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='16' width='4' height='6' fill='%231a237e'/%3E%3Crect x='8' y='10' width='4' height='12' fill='%23e53935'/%3E%3Crect x='14' y='6' width='4' height='16' fill='%231a237e'/%3E%3Crect x='20' y='12' width='2' height='10' fill='%23e53935'/%3E%3C/svg%3E">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="data.js"></script>
 <style>
@@ -56,7 +57,7 @@ tr:nth-child(even):hover td{background:#f0f0ff}
 .note a{color:#1a237e}
 @media(max-width:900px){
   .layout{flex-direction:column}
-  .sidebar{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid #ddd;max-height:300px}
+  .sidebar{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid #ddd;max-height:50vh}
   .chart-grid{grid-template-columns:1fr}
 }
 </style>
@@ -503,12 +504,12 @@ function updateValRangeChart(f) {
 let chartCities = null;
 function updateCitiesChart(f) {
   const cityTotals = {};
-  for (const [city, val] of DATA.cities_sorted) {
-    // We can't easily filter by year for cities without that dimension
-    // Use top_grants to estimate
-    cityTotals[city] = val.count;
+  for (const g of filteredGrants) {
+    const cy = g.cy || 'Unknown';
+    if (!cityTotals[cy]) cityTotals[cy] = 0;
+    cityTotals[cy]++;
   }
-  
+
   const sorted = Object.entries(cityTotals).sort((a,b) => b[1] - a[1]).slice(0, 15);
   const labels = sorted.map(([c]) => c.length > 25 ? c.slice(0,22)+'...' : c);
   const values = sorted.map(([_,v]) => v);
@@ -572,8 +573,10 @@ function updateProvFundingChart(f) {
 let chartCityFunding = null;
 function updateCityFundingChart(f) {
   const cityTotals = {};
-  for (const [city, val] of DATA.cities_sorted) {
-    cityTotals[city] = val.total;
+  for (const g of filteredGrants) {
+    const cy = g.cy || 'Unknown';
+    if (!cityTotals[cy]) cityTotals[cy] = 0;
+    cityTotals[cy] += g.v;
   }
   const sorted = Object.entries(cityTotals).sort((a,b) => b[1] - a[1]).slice(0, 15);
   const labels = sorted.map(([c]) => c.length > 25 ? c.slice(0,22)+'...' : c);
@@ -885,7 +888,7 @@ let compSortKey = 'v';
 let compSortAsc = false;
 
 function buildCompanyData() {
-  companyData = DATA.top_companies.map(r => ({...r}));
+  companyData = DATA.top_companies.filter(r => !/batch report/i.test(r.nm)).map(r => ({...r}));
   sortCompanies();
 }
 
